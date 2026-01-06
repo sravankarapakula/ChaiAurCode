@@ -1,5 +1,5 @@
-import { ApiError } from "../utils/ApiError"
-import { asyncHandler } from "../utils/asyncHandler"
+import { ApiError } from "../utils/ApiError.js"
+import { asyncHandler } from "../utils/asyncHandler.js"
 import jwt from "jsonwebtoken"
 import {User} from "../models/user.models.js"
 
@@ -15,7 +15,7 @@ try {
 
     await User.findById(decodedToken?._id).select("-password -refreshToken")
 
-    if (!user){
+    if (!User){
         throw new ApiError(401, "Invalid Access Token")
     }
 
