@@ -13,13 +13,13 @@ try {
 
     const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET)
 
-    await User.findById(decodedToken?._id).select("-password -refreshToken")
+    const user = await User.findById(decodedToken?._id).select("-password -refreshToken")
 
-    if (!User){
+    if (!user){
         throw new ApiError(401, "Invalid Access Token")
     }
 
-    req.user = User;
+    req.user = user;
     next();
 } catch (error) {
     throw new ApiError(401, error?.message || "Invalid AccessToken")

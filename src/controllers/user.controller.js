@@ -4,7 +4,7 @@ import {User} from "../models/user.models.js"
 import {uploadOnCloudinary} from "../utils/cloudinary.js"
 import {ApiResponse} from "../utils/ApiResponse.js"
 import jwt from "jsonwebtoken"
-
+import mongoose from "mongoose";
 
 const generateAccessAndRefreshTokens = async(userId)=>{
     try{
@@ -145,8 +145,8 @@ const logoutUser = asyncHandler( async(req,res) => {
     await User.findByIdAndUpdate(
         req.user._id,
         {
-            $set: {
-                refreshToken: undefined
+            $unset: {
+                refreshToken: 1
             }
         },
         {
@@ -214,15 +214,18 @@ const refreshAccessToken = asyncHandler(async (req,res) => {
 })
 
 const changeCurrentPassword = asyncHandler(async(req,res)=>{
-    const {oldPassword, newpassword, confPassword} = req.body()
+    const {oldPassword, newpassword, confPassword} = req.body
+    if (!oldPassword || !newpassword || !confPassword) {
+        throw new ApiError(400, "All password fields are required");
+    }
 
     if (!(newpassword===confPassword)){
         throw new ApiError(401, "Confirm Password must be same as the new Password.")
     }
 
-    const user = User.findById(req.user?._id)
-    const isPasswordCorrect = await user.isPasswordCorrect(oldPassword)
-    if (!isPasswordCorrect){
+    const user = await User.findById(req.user?._id).select("+password");
+    const isPasswordValid = await user.isPasswordCorrect(oldPassword)
+    if (!isPasswordValid){
         throw new ApiError(401, "The Old Password is incorrect.")
     }
 
@@ -241,7 +244,11 @@ const changeCurrentPassword = asyncHandler(async(req,res)=>{
 const getCurrentUser = asyncHandler(async(req,res)=>{
     return res
     .status(200)
-    .json(200,req.user,"Current User fetched successfully")
+    .json(new ApiResponse(
+        200,
+        req.user,
+        "Current User fetched successfully"
+    ))
 })
 
 const updateAccountDetails = asyncHandler(async(req,res)=>{
@@ -328,7 +335,7 @@ const updateUserCoverImage = asyncHandler(async(req,res)=>{
 })
 
 const getUserChannelProfile = asyncHandler(async(req,res)=>{
-    const {username} = req.params
+    const {username} = req.params;
 
     if (!username?.trim()){
         throw new ApiError(400,"Username is missing.")
@@ -387,7 +394,7 @@ const getUserChannelProfile = asyncHandler(async(req,res)=>{
         }
     ])
 
-    if (!channel?.lenght){
+    if (!channel?.length){
         throw new ApiError(404," Channel does not exist.")
     }
 
@@ -402,7 +409,7 @@ const getWatchHistory = asyncHandler(async(req,res)=>{
     const user = await User.aggregate([
         {
             $match:{
-                _id: new mongoose.types.ObjectId(req.user._id)
+                _id: new mongoose.Types.ObjectId(req.user._id)
             }
         },
         {
@@ -451,6 +458,7 @@ const getWatchHistory = asyncHandler(async(req,res)=>{
         )
     )
 })
+
 
 export {
     registerUser,
